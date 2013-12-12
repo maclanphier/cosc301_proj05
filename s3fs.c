@@ -45,7 +45,8 @@ void *fs_init(struct fuse_conn_info *conn)
     fprintf(stderr, "fs_init --- initializing file system.\n");
     s3context_t *ctx = GET_PRIVATE_DATA;
     s3fs_cear_bucket(ctx->s3bucket);
-    fs_mkdir("/");
+    mode_t mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
+    fs_mkdir("/",mode);
     return ctx;
 }
 
@@ -156,8 +157,49 @@ int fs_mkdir(const char *path, mode_t mode) {
     fprintf(stderr, "fs_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
     s3context_t *ctx = GET_PRIVATE_DATA;
     mode |= S_IFDIR;
-
-    return -EIO;
+    parent = basename(strdup(path));
+    if(get_dirent(parent) == NULL){
+    	fs_mkdir(parent,mode);
+    }
+    //set up the child
+    s3dirent_t* child = (s3dirent_t)malloc(2*entsize);
+    child[0].type = 'D';
+    child[0].name = strdup[path];
+    fs_getattr(path,child[0].metadata);
+    child[0].size = 2;
+    child[0].free = 1;
+    //alter the parent
+    s3dirent_t* parentdir = get_dirent(parent);
+    if(parentdir[0].free == 0){
+    	parentdir[0].size ++;
+    	s3dirent_t* new_parentdir = (s3dirent_t*)malloc(entsize*(parentdir[0].size); 
+    	memcpy(new_parentdir,parentdir,parentdir[0].metadata.st_size);
+    	new_parentdir[0].metadata.st_size = size*entsize;
+    	new_parentdir[0].free = 1;
+    	new_parentdir[new_parentdir[0].size-1] = s3dirent_t;
+    	new_parentdir[new_parentdir[0].size-1].type = 'U';
+    	free(parentdir);
+    	parentdir = new_parentdir;
+    }
+    int freespot = 0;
+    int count = 0;
+    for(;count < parentdir[0].size;count++){
+    	if(parentdir[count].type == 'U'){
+    		freespot = count;
+    	}
+    }
+    if(freespot == 0){
+    	printf("There was no free spot when there should be\n");
+    	return -EIO;
+    }
+    else{
+    	parentdir[freespot].type = 'D';
+    	parentdir[freespot].name = path;
+    	parentdir[0].free --;
+    }
+    s3fs_put_object(ctx->s3bucket, path, 
+                        parentdir, parentdir[0].metadata.st_size);
+    return 0;
 }
 
 
