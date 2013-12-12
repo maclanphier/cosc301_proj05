@@ -120,10 +120,12 @@ s3dirent_t* get_dirent(const char* path){
 		if(dirents[i].name==obj){
 			if(dirents[i].type=='D'){
 				uint8_t* dirbuff;
-				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, entsize);
-				dirent_t ret = (dirent_t)dirbuff;
-			}else
-				dirent_t* ret = dirents[i];
+				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, 0);
+				s3dirent_t* ret = (dirent_t*)malloc(sizeof(dirbuff));
+				memcpy(ret, dirbuff, sizeof(dirbuff));
+			}else{
+				s3dirent_t* ret = (dirent_t*)malloc(entsize);
+				memcpy(ret, dirents[i], entsize);
 			free(dirents);
 			free(buf);
 			return ret;	
