@@ -147,6 +147,15 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     fprintf(stderr, "fs_readdir(path=\"%s\", buf=%p, offset=%d)\n",
           path, buf, (int)offset);
     s3context_t *ctx = GET_PRIVATE_DATA;
+    s3dirent_t* dir = get_dirent(path);
+    int numdirent = dir[0].size;
+    int i = 0;
+    for(; i < numdirent; i++){
+    	//call filler to fill in directory names to supplied buffer
+    	if(filler(buf,dir[i].name,NULL,0) != 0){
+    		return -ENOMEM;
+    	}
+    }
     return -EIO;
 }
 
