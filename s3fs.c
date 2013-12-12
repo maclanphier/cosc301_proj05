@@ -45,7 +45,15 @@ void *fs_init(struct fuse_conn_info *conn)
     fprintf(stderr, "fs_init --- initializing file system.\n");
     s3context_t *ctx = GET_PRIVATE_DATA;
     s3fs_cear_bucket(ctx->s3bucket);
-    fs_mkdir("/");
+    s3dirent_t* root = (s3dirent_t*)malloc(2*entsize);
+    root[0]->name = ".";
+    root[0]->type = 'D';
+    root[0]->size = 2;
+    root[0]->free = 1;
+    root[0]->metadata.st_mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
+    root[0]->metadata.st_size = root->size*entsize;
+    root[1]->type = 'U';
+   	s3fs_put_object(ctx->s3bucket, "/", (uint8*)(*root), root[0]->metadata.st_size);  
     return ctx;
 }
 
@@ -93,7 +101,7 @@ int fs_opendir(const char *path, struct fuse_file_info *fi) {
     return -EIO;
 }//^^I think this is done
 
-s3dirent_t get_dirent(const char* path){
+s3dirent_t* get_dirent(const char* path){
 	s3context_t *ctx = GET_PRIVATE_DATA;
 	char* dir = dirname(strdup(path));
 	char* obj = basename(strdup(path));
@@ -110,7 +118,7 @@ s3dirent_t get_dirent(const char* path){
 				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, entsize);
 				dirent_t ret = (dirent_t)dirbuff;
 			}else
-				dirent_t ret = dirents[i];
+				dirent_t* ret = dirents[i];
 			free(dirents);
 			free(buf);
 			return ret;	
@@ -156,7 +164,7 @@ int fs_mkdir(const char *path, mode_t mode) {
     fprintf(stderr, "fs_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
     s3context_t *ctx = GET_PRIVATE_DATA;
     mode |= S_IFDIR;
-
+	
     return -EIO;
 }
 
