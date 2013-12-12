@@ -70,11 +70,9 @@ int fs_getattr(const char *path, struct stat *statbuf) {
     char* dirname = dirname(path);
     char* basename = basename(path);
     uint8_t buf[entsize];
-    s3dirent_t dir;
-    if(s3fs_get_object(ctx->s3bucket, dirname, &buf, 0, entsize)==entsize)
-    	return 0;
+    
     return -EIO;
-}//^^I think this is done
+}
 
 
 /*
@@ -88,9 +86,10 @@ int fs_opendir(const char *path, struct fuse_file_info *fi) {
     s3context_t *ctx = GET_PRIVATE_DATA;
     uint8_t buf[entsize];
     int code = s3fs_get_object(ctx->s3bucket, path, &buf, 0, entsize);
-    if(!
+    if(s3fs_get_object(ctx->s3bucket, path, &buf, 0, entsize)==entsize)
+    	return 0;
     return -EIO;
-}
+}//^^I think this is done
 
 
 /*
