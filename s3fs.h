@@ -27,7 +27,7 @@ typedef struct {
  * type) should go here.
  */
 typedef struct{
-	char* name[BUFFERSIZE];
+	char name[BUFFERSIZE];
 	struct stat metadata;
 	char type;
 } s3dirent_t;
