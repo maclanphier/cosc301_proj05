@@ -109,16 +109,18 @@ s3dirent_t* get_dirent(const char* path){
 	int size = s3fs_get_object(ctx->s3bucket, dir, &buf, 0, 0);
 	if(fs_access(path, 0)!=0 || size<0)
 		return NULL; //fail if there's no host directory, or if we don't have necessary permissions
-	dirent_t* dirents = (dirent_t*)buf;
+	s3dirent_t* dirents = (s3dirent_t*)buf;
 	int i=0;
 	for(;i<size/entsize;i++){
 		if(dirents[i].name==obj){
 			if(dirents[i].type=='D'){
 				uint8_t* dirbuff;
-				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, entsize);
-				dirent_t ret = (dirent_t)dirbuff;
-			}else
-				dirent_t* ret = dirents[i];
+				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, 0);
+				s3dirent_t* ret = (dirent_t*)malloc(sizeof(dirbuff));
+				memcpy(ret, dirbuff, sizeof(dirbuff));
+			}else{
+				s3dirent_t* ret = (dirent_t*)malloc(entsize);
+				memcpy(ret, dirents[i], entsize);
 			free(dirents);
 			free(buf);
 			return ret;	
