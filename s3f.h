@@ -5,8 +5,4 @@ typedef struct{
 char type;		//File (F), Directory (D) or Unused (U)
 char name[256];		
 struct stat metadata;
-//size
-//pointer
-//timestamps - creation, access, modify
-//permissions (?)
 }s3dirent_t;
