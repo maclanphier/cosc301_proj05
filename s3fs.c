@@ -22,6 +22,9 @@
 
 int entsize = sizeof(s3dirent_t);
 
+s3dirent_t* get_dirent(const char*);
+int fs_access(const char, int);
+
 /*
  * For each function below, if you need to return an error,
  * read the appropriate man page for the call and see what
@@ -44,17 +47,18 @@ void *fs_init(struct fuse_conn_info *conn)
 {
     fprintf(stderr, "fs_init --- initializing file system.\n");
     s3context_t *ctx = GET_PRIVATE_DATA;
-    s3fs_cear_bucket(ctx->s3bucket);
+    s3fs_clear_bucket(ctx->s3bucket);
 
     s3dirent_t* root = (s3dirent_t*)malloc(2*entsize);
-    root[0]->name = ".";
-    root[0]->type = 'D';
-    root[0]->size = 2;
-    root[0]->free = 1;
-    root[0]->metadata.st_mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
-    root[0]->metadata.st_size = root->size*entsize;
-    root[1]->type = 'U';
-   	s3fs_put_object(ctx->s3bucket, "/", (uint8*)(*root), root[0]->metadata.st_size);  
+    root[0].name[0] = '.';
+    root[0].name[1] = '\0';
+    root[0].type = 'D';
+    root[0].size = 2;
+    root[0].free = 1;
+    root[0].metadata.st_mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
+    root[0].metadata.st_size = root->size*entsize;
+    root[1].type = 'U';
+   	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*)root, root[0].metadata.st_size);  
     return ctx;
 }
 
@@ -77,9 +81,9 @@ void fs_destroy(void *userdata) {
 
 int fs_getattr(const char *path, struct stat *statbuf) {
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
-    s3context_t *ctx = GET_PRIVATE_DATA;
+    //s3context_t *ctx = GET_PRIVATE_DATA;
     s3dirent_t dirent = get_dirent(path);
-    if(!s3dirent_t)
+    if(!dirent)
     	return -EIO;
     *statbuf = dirent.metadata;
     return 0;
@@ -97,8 +101,8 @@ int fs_getattr(const char *path, struct stat *statbuf) {
 int fs_opendir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_opendir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    if(get_dirent(path))
-    	return 0
+    if(get_dirent(path) != NULL)
+    	return 0;
     return -EIO;
 }//^^I think this is done
 
@@ -110,7 +114,7 @@ s3dirent_t* get_dirent(const char* path){
 	int size = s3fs_get_object(ctx->s3bucket, dir, &buf, 0, 0);
 	if(fs_access(path, 0)!=0 || size<0)
 		return NULL; //fail if there's no host directory, or if we don't have necessary permissions
-	dirent_t* dirents = (dirent_t*)buf;
+	s3dirent_t* dirents = (s3dirent_t*)buf;
 	int i=0;
 	for(;i<size/entsize;i++){
 		if(dirents[i].name==obj){
@@ -165,26 +169,27 @@ int fs_mkdir(const char *path, mode_t mode) {
     fprintf(stderr, "fs_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
     s3context_t *ctx = GET_PRIVATE_DATA;
     mode |= S_IFDIR;
-    parent = basename(strdup(path));
+    char* parent = basename(strdup(path));
     if(get_dirent(parent) == NULL){
     	fs_mkdir(parent,mode);
     }
     //set up the child
-    s3dirent_t* child = (s3dirent_t)malloc(2*entsize);
+    s3dirent_t* child = (s3dirent_t*)malloc(2*entsize);
     child[0].type = 'D';
-    child[0].name = strdup[path];
-    fs_getattr(path,child[0].metadata);
+    strcpy(child[0].name, path);
+    fs_getattr(path,&child[0].metadata);
     child[0].size = 2;
     child[0].free = 1;
     //alter the parent
     s3dirent_t* parentdir = get_dirent(parent);
     if(parentdir[0].free == 0){
     	parentdir[0].size ++;
-    	s3dirent_t* new_parentdir = (s3dirent_t*)malloc(entsize*(parentdir[0].size); 
+    	s3dirent_t* new_parentdir = (s3dirent_t*)malloc(entsize*(parentdir[0].size)); 
     	memcpy(new_parentdir,parentdir,parentdir[0].metadata.st_size);
-    	new_parentdir[0].metadata.st_size = size*entsize;
+    	new_parentdir[0].metadata.st_size = (parentdir[0].size)*entsize;
     	new_parentdir[0].free = 1;
-    	new_parentdir[new_parentdir[0].size-1] = s3dirent_t;
+    	s3dirent_t temp;
+    	new_parentdir[new_parentdir[0].size-1] = temp;
     	new_parentdir[new_parentdir[0].size-1].type = 'U';
     	free(parentdir);
     	parentdir = new_parentdir;
