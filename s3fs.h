@@ -26,7 +26,11 @@ typedef struct {
  * Other data type definitions (e.g., a directory entry
  * type) should go here.
  */
-
+typedef struct{
+	char* name[BUFFERSIZE];
+	struct stat metadata;
+	char type;
+} s3dirent_t;
 
 
 

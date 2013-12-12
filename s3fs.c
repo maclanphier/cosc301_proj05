@@ -20,6 +20,8 @@
 
 #define GET_PRIVATE_DATA ((s3context_t *) fuse_get_context()->private_data)
 
+int entsize = sizeof(s3dirent_t);
+
 /*
  * For each function below, if you need to return an error,
  * read the appropriate man page for the call and see what
@@ -65,8 +67,14 @@ void fs_destroy(void *userdata) {
 int fs_getattr(const char *path, struct stat *statbuf) {
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
+    char* dirname = dirname(path);
+    char* basename = basename(path);
+    uint8_t buf[entsize];
+    s3dirent_t dir;
+    if(s3fs_get_object(ctx->s3bucket, dirname, &buf, 0, entsize)==entsize)
+    	return 0;
     return -EIO;
-}
+}//^^I think this is done
 
 
 /*
@@ -78,6 +86,9 @@ int fs_getattr(const char *path, struct stat *statbuf) {
 int fs_opendir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_opendir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
+    uint8_t buf[entsize];
+    int code = s3fs_get_object(ctx->s3bucket, path, &buf, 0, entsize);
+    if(!
     return -EIO;
 }
 
