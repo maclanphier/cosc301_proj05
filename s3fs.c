@@ -67,13 +67,15 @@ void fs_destroy(void *userdata) {
 int fs_getattr(const char *path, struct stat *statbuf) {
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    char* dirname = dirname(path);
-    char* basename = basename(path);
-    uint8_t buf[entsize];
+    s3dirent_t dirent = get_dirent(path);
+    if(!s3dirent_t)
+    	return -EIO;
+    *statbuf = dirent.metadata;
+    return 0;
+   	
     
     return -EIO;
 }
-
 
 /*
  * Open directory
@@ -84,12 +86,36 @@ int fs_getattr(const char *path, struct stat *statbuf) {
 int fs_opendir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_opendir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    uint8_t buf[entsize];
-    int code = s3fs_get_object(ctx->s3bucket, path, &buf, 0, entsize);
-    if(s3fs_get_object(ctx->s3bucket, path, &buf, 0, entsize)==entsize)
-    	return 0;
+    if(get_dirent(path))
+    	return 0
     return -EIO;
 }//^^I think this is done
+
+s3dirent_t get_dirent(const char* path){
+	s3context_t *ctx = GET_PRIVATE_DATA;
+	char* dir = dirname(strdup(path));
+	char* obj = basename(strdup(path));
+	uint8_t* buf;
+	int size = s3fs_get_object(ctx->s3bucket, dir, &buf, 0, 0);
+	if(fs_access(path, 0)!=0 || size<0)
+		return NULL; //fail if there's no host directory, or if we don't have necessary permissions
+	dirent_t* dirents = (dirent_t*)buf;
+	int i=0;
+	for(;i<size/entsize;i++){
+		if(dirents[i].name==obj){
+			if(dirents[i].type=='D'){
+				uint8_t* dirbuff;
+				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, entsize);
+				dirent_t ret = (dirent_t)dirbuff;
+			}else
+				dirent_t ret = dirents[i];
+			free(dirents);
+			free(buf);
+			return ret;	
+		}
+	}
+	return NULL;
+}//^^ Helper function for basically everything; get a desired dirent, given a path.
 
 
 /*
