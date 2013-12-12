@@ -23,7 +23,7 @@
 int entsize = sizeof(s3dirent_t);
 
 s3dirent_t* get_dirent(const char*);
-int fs_access(const char, int);
+int fs_access(const char*, int);
 
 /*
  * For each function below, if you need to return an error,
@@ -82,10 +82,10 @@ void fs_destroy(void *userdata) {
 int fs_getattr(const char *path, struct stat *statbuf) {
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
     //s3context_t *ctx = GET_PRIVATE_DATA;
-    s3dirent_t dirent = get_dirent(path);
+    s3dirent_t* dirent = get_dirent(path);
     if(!dirent)
     	return -EIO;
-    *statbuf = dirent.metadata;
+    *statbuf = dirent[0].metadata;
     return 0;
    	
     
@@ -118,14 +118,16 @@ s3dirent_t* get_dirent(const char* path){
 	int i=0;
 	for(;i<size/entsize;i++){
 		if(dirents[i].name==obj){
+		s3dirent_t* ret=NULL;
 			if(dirents[i].type=='D'){
 				uint8_t* dirbuff;
 				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, 0);
-				s3dirent_t* ret = (dirent_t*)malloc(sizeof(dirbuff));
+				ret = (s3dirent_t*)malloc(sizeof(dirbuff));
 				memcpy(ret, dirbuff, sizeof(dirbuff));
 			}else{
-				s3dirent_t* ret = (dirent_t*)malloc(entsize);
-				memcpy(ret, dirents[i], entsize);
+				ret = (s3dirent_t*)malloc(entsize);
+				memcpy(ret, &(dirents[i]), entsize);
+			}
 			free(dirents);
 			free(buf);
 			return ret;	
@@ -209,11 +211,10 @@ int fs_mkdir(const char *path, mode_t mode) {
     }
     else{
     	parentdir[freespot].type = 'D';
-    	parentdir[freespot].name = path;
+    	strcpy(parentdir[freespot].name,path);
     	parentdir[0].free --;
     }
-    s3fs_put_object(ctx->s3bucket, path, 
-                        parentdir, parentdir[0].metadata.st_size);
+    s3fs_put_object(ctx->s3bucket, path, (uint8_t*)parentdir, parentdir[0].metadata.st_size);
     return 0;
 
 }
