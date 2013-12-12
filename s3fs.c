@@ -44,6 +44,8 @@ void *fs_init(struct fuse_conn_info *conn)
 {
     fprintf(stderr, "fs_init --- initializing file system.\n");
     s3context_t *ctx = GET_PRIVATE_DATA;
+    s3fs_cear_bucket(ctx->s3bucket);
+    fs_mkdir("/");
     return ctx;
 }
 
