@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CFLAGS = -g -Wall `pkg-config fuse --cflags` `curl-config --cflags` `xml2-config --cflags` -I libs3-2.0/inc
 HEADERS = s3fs.h
 COMMON_OBJS = libs3_wrapper.o 
