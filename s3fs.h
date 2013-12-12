@@ -29,7 +29,9 @@ typedef struct {
 typedef struct{
 	char name[BUFFERSIZE];
 	struct stat metadata;
-	char type;
+	char type; //D, F or U
+	int  size;
+	int  free;
 } s3dirent_t;
 
 
