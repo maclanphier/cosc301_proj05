@@ -115,7 +115,7 @@ int fs_getattr(const char *path, struct stat *statbuf) {
     if(!dirent){
     	return -ENOENT;
 	}
-    *statbuf = dirent[0].metadata;
+    memcpy(statbuf, &dirent[0].metadata, sizeof(struct stat));
     return 0;
 }
 
@@ -138,7 +138,6 @@ s3dirent_t* get_dirent(const char* path){
 	s3context_t* ctx = GET_PRIVATE_DATA;
 	s3dirent_t* buf = NULL;
 	int rv = (int)s3fs_get_object(ctx->s3bucket, path, (uint8_t**)&buf, 0, 0);
-	print_dirent(buf);
 	if(rv==-1)
 		return NULL;
 	return buf;
@@ -154,8 +153,8 @@ void print_dirent(s3dirent_t* dirent){
 		printf("Type: %c\n", dirent->type);
 		printf("Free: %d\n", dirent->free);
 		printf("UID: %u\n", dirent->metadata.st_uid);
-		printf("Bytesize: %u\n", dirent->metadata.st_size);
-		printf("Mode: %ld\n", dirent->metadata.st_mode);
+		printf("Bytesize: %ld\n", dirent->metadata.st_size);
+		printf("Mode: %u\n", dirent->metadata.st_mode);
 	}
 	printf("\n\n");
 }
