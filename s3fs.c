@@ -23,7 +23,9 @@
 int entsize = sizeof(s3dirent_t);
 
 s3dirent_t* get_dirent(const char*);
+
 int fs_access(const char*, int);
+struct stat dummy_metadata(mode_t, uid_t, gid_t, off_t);
 
 /*
  * For each function below, if you need to return an error,
@@ -56,11 +58,33 @@ void *fs_init(struct fuse_conn_info *conn)
     root[0].type = 'D';
     root[0].size = 2;
     root[0].free = 1;
-    root[0].metadata.st_mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
-    root[0].metadata.st_size = root->size*entsize;
+    mode_t mode = (S_IFDIR|S_IRUSR|S_IWUSR|S_IXUSR);
+    root[0].metadata = dummy_metadata(mode, getuid(),getgid(),2*entsize);
     root[1].type = 'U';
+    root[1].metadata = dummy_metadata(mode, getuid(),getgid(),0);
 	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*)root, root[0].metadata.st_size);  
     return ctx;
+}
+
+struct stat dummy_metadata(mode_t mode,uid_t uid,gid_t gid,off_t size){
+	struct stat dummy;
+	dummy.st_dev = 1;
+	dummy.st_ino = 90;
+	dummy.st_mode = mode;
+	dummy.st_nlink = 1;
+	dummy.st_uid = uid;
+	dummy.st_gid = gid;
+	dummy.st_rdev = 42;
+	dummy.st_size = size;
+	dummy.st_blksize = 512;
+	dummy.st_blocks = 4;
+	time_t TIME;
+	localtime(&TIME);
+	dummy.st_atime = TIME;
+	dummy.st_mtime = TIME;
+	dummy.st_ctime = TIME;
+	return dummy;
+
 }
 
 /*
@@ -85,13 +109,10 @@ int fs_getattr(const char *path, struct stat *statbuf) {
     //s3context_t *ctx = GET_PRIVATE_DATA;
     s3dirent_t* dirent = get_dirent(path);
     if(!dirent){
-    	return -EIO;
+    	return -ENOENT;
 	}
     *statbuf = dirent[0].metadata;
     return 0;
-   	
-    
-    return -EIO;
 }
 
 /*
