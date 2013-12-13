@@ -47,6 +47,7 @@ void *fs_init(struct fuse_conn_info *conn)
 {
     fprintf(stderr, "fs_init --- initializing file system.\n");
     s3context_t *ctx = GET_PRIVATE_DATA;
+    printf("bucket name: %s\n", ctx->s3bucket);
     s3fs_clear_bucket(ctx->s3bucket);
 
     s3dirent_t* root = (s3dirent_t*)malloc(2*entsize);
@@ -58,7 +59,7 @@ void *fs_init(struct fuse_conn_info *conn)
     root[0].metadata.st_mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
     root[0].metadata.st_size = root->size*entsize;
     root[1].type = 'U';
-   	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*)root, root[0].metadata.st_size);  
+	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*)root, root[0].metadata.st_size);  
     return ctx;
 }
 
@@ -107,7 +108,24 @@ int fs_opendir(const char *path, struct fuse_file_info *fi) {
 }//^^I think this is done
 
 s3dirent_t* get_dirent(const char* path){
+	printf("second get_dirent, path %s\n", path);
+	s3context_t* ctx = GET_PRIVATE_DATA;
+	uint8_t* buf;
+	int size = s3fs_get_object(ctx->s3bucket, path, &buf, 0, 0);
+	if(size==-1)
+		return NULL;
+	s3dirent_t* ret = (s3dirent_t*)malloc(size);
+	memcpy(ret, buf, size);
+	free(buf);
+	return ret;
+
+}
+
+/*
+s3dirent_t* get_dirent(const char* path){
+	printf("Calling get_dirent with path: %s\n", path);
 	s3context_t *ctx = GET_PRIVATE_DATA;
+	printf("bucket name in get_dirent: %s\n", ctx->s3bucket);
 	char* dir = dirname(strdup(path));
 	char* obj = basename(strdup(path));
 	uint8_t* buf;
@@ -117,24 +135,29 @@ s3dirent_t* get_dirent(const char* path){
 	s3dirent_t* dirents = (s3dirent_t*)buf;
 	int i=0;
 	for(;i<size/entsize;i++){
-		if(dirents[i].name==obj){
-		s3dirent_t* ret=NULL;
+		printf("does %s equal %s?\n", path, dirents[i].name);
+		if(strcmp(dirents[i].name,path)){
+			s3dirent_t* ret=NULL;
 			if(dirents[i].type=='D'){
 				uint8_t* dirbuff;
-				s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, 0);
+				printf("Reading %ld\n", s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, 0));
 				ret = (s3dirent_t*)malloc(sizeof(dirbuff));
 				memcpy(ret, dirbuff, sizeof(dirbuff));
 			}else{
 				ret = (s3dirent_t*)malloc(entsize);
 				memcpy(ret, &(dirents[i]), entsize);
 			}
-			free(dirents);
-			free(buf);
+			//free(dirents);
+			//free(buf);
 			return ret;	
 		}
 	}
 	return NULL;
 }//^^ Helper function for basically everything; get a desired dirent, given a path.
+*/
+
+
+
 
 
 /*
