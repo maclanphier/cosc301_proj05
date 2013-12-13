@@ -80,6 +80,7 @@ struct stat dummy_metadata(mode_t mode,uid_t uid,gid_t gid,off_t size){
 	dummy.st_blocks = 4;
 	time_t TIME;
 	localtime(&TIME);
+	printf("Time: %lu\n",TIME);
 	dummy.st_atime = TIME;
 	dummy.st_mtime = TIME;
 	dummy.st_ctime = TIME;
@@ -134,13 +135,9 @@ s3dirent_t* get_dirent(const char* path){
 	s3context_t* ctx = GET_PRIVATE_DATA;
 	s3dirent_t* buf = NULL;
 	int rv = (int)s3fs_get_object(ctx->s3bucket, path, (uint8_t**)&buf, 0, 0);
-	int size = rv/entsize;
 	if(rv==-1)
 		return NULL;
-	s3dirent_t* ret = (s3dirent_t*)malloc(size);
-	memcpy(ret, buf, size);
-	free(buf);
-	return ret;
+	return buf;
 }
 
 
