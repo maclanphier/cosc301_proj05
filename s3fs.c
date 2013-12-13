@@ -141,7 +141,7 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     		return -ENOMEM;
     	}
     }
-    return -EIO;
+    return 0;
 }
 
 
@@ -151,7 +151,7 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
 int fs_releasedir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_releasedir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    return -EIO;
+    return 0;
 }
 
 
@@ -210,10 +210,9 @@ int fs_mkdir(const char *path, mode_t mode) {
     }
     s3fs_put_object(ctx->s3bucket, path, (uint8_t*)parentdir, parentdir[0].metadata.st_size);
     return 0;
-
 }
-
-/*
+#if 0
+/*Mac's
  * Remove a directory. 
  */
 int fs_rmdir(const char *path) {
@@ -231,6 +230,33 @@ int fs_rmdir(const char *path) {
     }
     free(directory);
     return 0;
+}
+#endif
+
+/*Mine
+ * Remove a directory. 
+ *
+ */
+int fs_rmdir(const char *path) {
+    fprintf(stderr, "fs_rmdir(path=\"%s\")\n", path);
+    s3context_t *ctx = GET_PRIVATE_DATA;
+	char* dir = dirname(strdup(path));
+	s3dirent_t* basedir = get_dirent(path);
+	int i = 1;
+	for(;i<basedir[0].size;i++){
+		if(basedir[i].type != 'U')
+			return -ENOTEMPTY;
+	}
+	s3fs_remove_object(ctx->s3bucket, path);
+	s3dirent_t* parentdir = get_dirent(dir);
+	for(i=0;i<parentdir[0].size;i++){
+		if(strcmp(parentdir[i].name, path)==0){
+			parentdir[i].type = 'U';
+			parentdir[i].name[0] = '\0';
+		}
+
+	}
+    return -EIO;
 }
 
 
