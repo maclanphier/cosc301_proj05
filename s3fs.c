@@ -114,7 +114,7 @@ s3dirent_t* get_dirent(const char* path){
 	s3dirent_t* buf = NULL;
 	int rv = (int)s3fs_get_object(ctx->s3bucket, path, (uint8_t**)&buf, 0, 0);
 	int size = rv/entsize;
-	if(size==-1)
+	if(rv==-1)
 		return NULL;
 	s3dirent_t* ret = (s3dirent_t*)malloc(size);
 	memcpy(ret, buf, size);
