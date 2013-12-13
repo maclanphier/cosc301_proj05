@@ -84,8 +84,9 @@ int fs_getattr(const char *path, struct stat *statbuf) {
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
     //s3context_t *ctx = GET_PRIVATE_DATA;
     s3dirent_t* dirent = get_dirent(path);
-    if(!dirent)
+    if(!dirent){
     	return -EIO;
+	}
     *statbuf = dirent[0].metadata;
     return 0;
    	
@@ -141,7 +142,7 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     		return -ENOMEM;
     	}
     }
-    return -EIO;
+    return 0;
 }
 
 
@@ -151,7 +152,7 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
 int fs_releasedir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_releasedir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    return -EIO;
+    return 0;
 }
 
 
@@ -227,6 +228,7 @@ int fs_rmdir(const char *path) {
     for(;count < parentSize; count++){
         if(strcmp(parentdir[count].name,path)){
             parentdir[count].type = 'U';
+            parentdir[count].name[0] = '\n';
         }
     }
     free(directory);
