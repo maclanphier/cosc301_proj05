@@ -118,45 +118,7 @@ s3dirent_t* get_dirent(const char* path){
 	memcpy(ret, buf, size);
 	free(buf);
 	return ret;
-
 }
-
-/*
-s3dirent_t* get_dirent(const char* path){
-	printf("Calling get_dirent with path: %s\n", path);
-	s3context_t *ctx = GET_PRIVATE_DATA;
-	printf("bucket name in get_dirent: %s\n", ctx->s3bucket);
-	char* dir = dirname(strdup(path));
-	char* obj = basename(strdup(path));
-	uint8_t* buf;
-	int size = s3fs_get_object(ctx->s3bucket, dir, &buf, 0, 0);
-	if(fs_access(path, 0)!=0 || size<0)
-		return NULL; //fail if there's no host directory, or if we don't have necessary permissions
-	s3dirent_t* dirents = (s3dirent_t*)buf;
-	int i=0;
-	for(;i<size/entsize;i++){
-		printf("does %s equal %s?\n", path, dirents[i].name);
-		if(strcmp(dirents[i].name,path)){
-			s3dirent_t* ret=NULL;
-			if(dirents[i].type=='D'){
-				uint8_t* dirbuff;
-				printf("Reading %ld\n", s3fs_get_object(ctx->s3bucket, path, &dirbuff, 0, 0));
-				ret = (s3dirent_t*)malloc(sizeof(dirbuff));
-				memcpy(ret, dirbuff, sizeof(dirbuff));
-			}else{
-				ret = (s3dirent_t*)malloc(entsize);
-				memcpy(ret, &(dirents[i]), entsize);
-			}
-			//free(dirents);
-			//free(buf);
-			return ret;	
-		}
-	}
-	return NULL;
-}//^^ Helper function for basically everything; get a desired dirent, given a path.
-*/
-
-
 
 
 
@@ -251,14 +213,24 @@ int fs_mkdir(const char *path, mode_t mode) {
 
 }
 
-
 /*
  * Remove a directory. 
  */
 int fs_rmdir(const char *path) {
     fprintf(stderr, "fs_rmdir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    return -EIO;
+    s3dirent_t* directory = get_dirent(path);
+    char* parent = basename(strdup(path));
+    s3dirent_t* parentdir = get_dirent(parent);
+    int parentSize = parentdir[0].size;
+    int count = 0;
+    for(;count < parentSize; count++){
+        if(strcmp(parentdir[count].name,path)){
+            parentdir[count].type = 'U';
+        }
+    }
+    free(directory);
+    return 0;
 }
 
 
