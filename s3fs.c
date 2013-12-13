@@ -111,8 +111,9 @@ int fs_opendir(const char *path, struct fuse_file_info *fi) {
 s3dirent_t* get_dirent(const char* path){
 	printf("second get_dirent, path %s\n", path);
 	s3context_t* ctx = GET_PRIVATE_DATA;
-	uint8_t* buf;
-	int size = s3fs_get_object(ctx->s3bucket, path, &buf, 0, 0);
+	s3dirent_t* buf = NULL;
+	int rv = (int)s3fs_get_object(ctx->s3bucket, path, (uint8_t**)&buf, 0, 0);
+	int size = rv/entsize;
 	if(size==-1)
 		return NULL;
 	s3dirent_t* ret = (s3dirent_t*)malloc(size);
