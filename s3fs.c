@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
@@ -26,6 +27,7 @@ s3dirent_t* get_dirent(const char*);
 
 int fs_access(const char*, int);
 struct stat dummy_metadata(mode_t, uid_t, gid_t, off_t);
+void print_dirent(s3dirent_t*);
 
 /*
  * For each function below, if you need to return an error,
@@ -61,12 +63,13 @@ void *fs_init(struct fuse_conn_info *conn)
     mode_t mode = (S_IFDIR|S_IRUSR|S_IWUSR|S_IXUSR);
     root[0].metadata = dummy_metadata(mode, getuid(),getgid(),2*entsize);
     root[1].type = 'U';
+    root[1].name[0] = '\0';
     root[1].metadata = dummy_metadata(mode, getuid(),getgid(),0);
 	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*)root, root[0].metadata.st_size);  
     return ctx;
 }
 
-struct stat dummy_metadata(mode_t mode,uid_t uid,gid_t gid,off_t size){
+struct stat dummy_metadata(mode_t mode, uid_t uid, gid_t gid, off_t size){
 	struct stat dummy;
 	dummy.st_dev = 1;
 	dummy.st_ino = 90;
@@ -79,7 +82,7 @@ struct stat dummy_metadata(mode_t mode,uid_t uid,gid_t gid,off_t size){
 	dummy.st_blksize = 512;
 	dummy.st_blocks = 4;
 	time_t TIME;
-	localtime(&TIME);
+	time(&TIME);
 	printf("Time: %lu\n",TIME);
 	dummy.st_atime = TIME;
 	dummy.st_mtime = TIME;
@@ -135,9 +138,26 @@ s3dirent_t* get_dirent(const char* path){
 	s3context_t* ctx = GET_PRIVATE_DATA;
 	s3dirent_t* buf = NULL;
 	int rv = (int)s3fs_get_object(ctx->s3bucket, path, (uint8_t**)&buf, 0, 0);
+	print_dirent(buf);
 	if(rv==-1)
 		return NULL;
 	return buf;
+}
+
+void print_dirent(s3dirent_t* dirent){
+	printf("\n\nPrinting Dirent:\n---------------\n");
+	if(dirent==NULL)
+		printf("%p\n",dirent);
+	else{
+		printf("Name: %s\n", dirent->name);
+		printf("Size: %d\n", dirent->size);
+		printf("Type: %c\n", dirent->type);
+		printf("Free: %d\n", dirent->free);
+		printf("UID: %u\n", dirent->metadata.st_uid);
+		printf("Bytesize: %u\n", dirent->metadata.st_size);
+		printf("Mode: %ld\n", dirent->metadata.st_mode);
+	}
+	printf("\n\n");
 }
 
 
